@@ -1,42 +1,31 @@
+#############################################################
+# 1. Database creation
+#############################################################
 
-DROP DATABASE chessgo;
-CREATE DATABASE chessgo;
+DROP DATABASE IF EXISTS chessgo;
+CREATE DATABASE IF NOT EXISTS chessgo;
 USE chessgo;
+
+###########
+# Tables
+###########
 
 CREATE TABLE country(
 id int not null,
-name varchar(50) not null,
+name varchar(50) not null UNIQUE,
 PRIMARY KEY (id)
 );
 
 CREATE TABLE player(
 id int not null,
-firstName varchar(50),
-lastName varchar(50),
-email  varchar(50),
+firstName varchar(50) not null,
+lastName varchar(50) not null,
+email  varchar(50) UNIQUE,
 elo int not null,
 countryId int not null,
 disabled bool null,
 PRIMARY KEY (id),
 FOREIGN KEY (countryId) REFERENCES country(id)
-);
-
-CREATE TABLE playerFriend(
-playerId int not null,  
-playerFriend int not null,
-PRIMARY KEY (playerId,playerFriend),
-FOREIGN KEY (playerId) REFERENCES player(id),
-FOREIGN KEY (playerFriend) REFERENCES player(id)
-);
-
-CREATE TABLE message(
-id int not null,
-recipientId int not null,
-senderId int not null,
-message varchar(500),
-PRIMARY KEY (id, recipientId, senderId),
-FOREIGN KEY (recipientId) REFERENCES player(id),
-FOREIGN KEY (senderId) REFERENCES player(id)
 );
 
 CREATE TABLE membershipType(
@@ -59,10 +48,9 @@ FOREIGN KEY (playerId) REFERENCES player(id),
 FOREIGN KEY (membershipTypeId) REFERENCES membershipType(id)
 );
 
-
 CREATE TABLE TypeOfMatch(
 id int not null,
-name varchar(50),
+name varchar(50) not null,
 label varchar(50),
 PRIMARY KEY (id)
 );
@@ -75,8 +63,6 @@ points float not null,
 PRIMARY KEY (id)
 );
 
-
-
 CREATE TABLE matchGame(
 id int not null,
 typeOfMatchId int not null,
@@ -85,9 +71,7 @@ PRIMARY KEY (id),
 FOREIGN KEY (typeOfMatchId) REFERENCES TypeOfMatch(id)
 );
 
-
-
-CREATE TABLE playerMatchGame(
+CREATE TABLE playerRole(
 playerId int not null,
 matchGameId int not null,
 white bool not null,
@@ -98,22 +82,19 @@ FOREIGN KEY (matchGameId) REFERENCES matchGame(id),
 FOREIGN KEY (resultTypeId) REFERENCES resultType(id)
 );
 
-
-
 CREATE TABLE tournament(
 id int not null,
 name varchar(100) not null,
 year year not null,
 startDate date null,
 endDate date null,
-countryId int not null,
+countryId int null,
+onWebPlatform bool null,
 entryFee decimal(10,2) null,
 prize decimal(10,2) null,
 PRIMARY KEY (id),
 FOREIGN KEY (countryId) REFERENCES country(id)
 );
-
-
 
 CREATE TABLE tournamentPlayer(
 tournamentId int  not null,
@@ -136,16 +117,21 @@ FOREIGN KEY (matchId) REFERENCES matchGame(id)
 CREATE TABLE move(
 id int not null,
 matchGameId int not null,
-moveOrder int not null,
-whiteMove varchar(10),
+moveOrder int not null CHECK(moveOrder > 0),
+whiteMove varchar(10) not null,
 blackMove varchar(10),
 whiteMoveTime time,
 blackMoveTIme time,
+PRIMARY KEY (id),
 FOREIGN KEY (matchGameId) REFERENCES matchGame(id)
 );
 
-#Insert Data
+#############################################################
+# 2. Population of tables
+#############################################################
+
 #Country
+############
 INSERT INTO COUNTRY (id, name) VALUES (1, 'Afghanistan');
 INSERT INTO COUNTRY (id, name) VALUES (2, 'Albania');
 INSERT INTO COUNTRY (id, name) VALUES (3, 'Algeria');
@@ -195,8 +181,8 @@ INSERT INTO COUNTRY (id, name) VALUES (46, 'Christmas Island');
 INSERT INTO COUNTRY (id, name) VALUES (47, 'Cocos (Keeling) Islands');
 INSERT INTO COUNTRY (id, name) VALUES (48, 'Colombia');
 INSERT INTO COUNTRY (id, name) VALUES (49, 'Comoros');
-INSERT INTO COUNTRY (id, name) VALUES (50, 'Congo');
-INSERT INTO COUNTRY (id, name) VALUES (51, 'Congo');
+INSERT INTO COUNTRY (id, name) VALUES (50, 'Democratic Republic of the Congo');
+INSERT INTO COUNTRY (id, name) VALUES (51, 'Republic of Congo');
 INSERT INTO COUNTRY (id, name) VALUES (52, 'Cook Islands');
 INSERT INTO COUNTRY (id, name) VALUES (53, 'Costa Rica');
 INSERT INTO COUNTRY (id, name) VALUES (54, 'Croatia');
@@ -260,8 +246,8 @@ INSERT INTO COUNTRY (id, name) VALUES (111, 'Jordan');
 INSERT INTO COUNTRY (id, name) VALUES (112, 'Kazakhstan');
 INSERT INTO COUNTRY (id, name) VALUES (113, 'Kenya');
 INSERT INTO COUNTRY (id, name) VALUES (114, 'Kiribati');
-INSERT INTO COUNTRY (id, name) VALUES (115, 'Korea');
-INSERT INTO COUNTRY (id, name) VALUES (116, 'Korea');
+INSERT INTO COUNTRY (id, name) VALUES (115, 'North Korea');
+INSERT INTO COUNTRY (id, name) VALUES (116, 'South Korea');
 INSERT INTO COUNTRY (id, name) VALUES (117, 'Kuwait');
 INSERT INTO COUNTRY (id, name) VALUES (118, 'Kyrgyzstan');
 INSERT INTO COUNTRY (id, name) VALUES (119, 'Lao People s Democratic Republic');
@@ -384,8 +370,8 @@ INSERT INTO COUNTRY (id, name) VALUES (235, 'Uzbekistan');
 INSERT INTO COUNTRY (id, name) VALUES (236, 'Vanuatu');
 INSERT INTO COUNTRY (id, name) VALUES (237, 'Venezuela');
 INSERT INTO COUNTRY (id, name) VALUES (238, 'Viet Nam');
-INSERT INTO COUNTRY (id, name) VALUES (239, 'Virgin Islands');
-INSERT INTO COUNTRY (id, name) VALUES (240, 'Virgin Islands');
+INSERT INTO COUNTRY (id, name) VALUES (239, 'Virgin Islands - US');
+INSERT INTO COUNTRY (id, name) VALUES (240, 'Virgin Islands - Spanish');
 INSERT INTO COUNTRY (id, name) VALUES (241, 'Wallis and Futuna');
 INSERT INTO COUNTRY (id, name) VALUES (242, 'Western Sahara');
 INSERT INTO COUNTRY (id, name) VALUES (243, 'Yemen');
@@ -393,48 +379,126 @@ INSERT INTO COUNTRY (id, name) VALUES (244, 'Zambia');
 INSERT INTO COUNTRY (id, name) VALUES (245, 'Zimbabwe');
 
 #Users
+############
 
 #Grand master players 
-INSERT INTO player(id, firstName, lastName, email, elo, countryId) VALUES (1,'Magnus', 'Carlsen' , 'mc@gmail.com', 3200, 3);
-INSERT INTO player(id, firstName, lastName, email, elo, countryId) VALUES (2,'Hikaru', 'Nakamura' , 'hn@gmail.com', 3100, 5);
-INSERT INTO player(id, firstName, lastName, email, elo, countryId) VALUES (3,'Garry', 'Kasparov' , 'gk@gmail.com', 2900, 4);
-INSERT INTO player(id, firstName, lastName, email, elo, countryId) VALUES (4, 'Bobby', 'Fisher' , null, 2900, 5);
-INSERT INTO player(id, firstName, lastName, email, elo, countryId) VALUES (5,'Boris', 'Spassky ' , null, 2900, 4);
+INSERT INTO player(id, firstName, lastName, email, elo, countryId) VALUES (1,'Magnus', 'Carlsen' , 'mc@gmail.com', 3200, 163);
+INSERT INTO player(id, firstName, lastName, email, elo, countryId) VALUES (2,'Hikaru', 'Nakamura' , 'hn@gmail.com', 3100, 232);
+INSERT INTO player(id, firstName, lastName, email, elo, countryId) VALUES (3,'Garry', 'Kasparov' , 'gk@gmail.com', 2851, 180);
+INSERT INTO player(id, firstName, lastName, email, elo, countryId) VALUES (4, 'Bobby', 'Fisher' , null, 2785 , 232);
+INSERT INTO player(id, firstName, lastName, email, elo, countryId) VALUES (5,'Boris', 'Spassky ' , null, 2690 , 180);
+INSERT INTO player(id, firstName, lastName, email, elo, countryId) VALUES (6,'Fabiano', 'Caruana ' , null, 2822, 232);
+INSERT INTO player(id, firstName, lastName, email, elo, countryId) VALUES (7,'Ding ', 'Liren ' , null, 2805, 45);
 
 #Normal players
 INSERT INTO player(id, firstName, lastName, email, elo, countryId) VALUES (100,'Federico', 'Durso ' , "fd@gmail.com", 1500, 1);
 INSERT INTO player(id, firstName, lastName, email, elo, countryId) VALUES (101,'Leandro', 'Ramella ' , "lr@gmail.com", 1000, 1);
 INSERT INTO player(id, firstName, lastName, email, elo, countryId) VALUES (102,'Muhammad', 'Abadi' , "ma@gmail.com", 976, 1);
 
+#users with membership expired 
+INSERT INTO player(id, firstName, lastName, email, elo, countryId) VALUES (103,'Emily', 'Ho' , "eh@gmail.com", 870, 45);
+INSERT INTO player(id, firstName, lastName, email, elo, countryId) VALUES (104,'Sandra', 'Levis' , "sl@gmail.com", 989, 73);
+
+#users with membership close to expire
+INSERT INTO player(id, firstName, lastName, email, elo, countryId) VALUES (105,'Charles', 'Simpson' , null, 650, 76);
+INSERT INTO player(id, firstName, lastName, email, elo, countryId) VALUES (106,'Marie', 'Hilton' , null, 700, 77);
+
+#users with membership not expired
+INSERT INTO player(id, firstName, lastName, email, elo, countryId) VALUES (107,'Elisa', 'Cool' , null, 600, 54);
+INSERT INTO player(id, firstName, lastName, email, elo, countryId) VALUES (108,'Ryan', 'Cooper' , null, 1200, 32);
+INSERT INTO player(id, firstName, lastName, email, elo, countryId) VALUES (109,'Hector', 'Gonzales' , null, 678, 12);
+INSERT INTO player(id, firstName, lastName, email, elo, countryId) VALUES (110,'Maxi', 'Pasman' , null, 1000, 1);
+
 #MembershipType
+################
 INSERT INTO membershipType(id, name, description ,price  ) VALUES(1,'Gold', 'Gold', 29);
 INSERT INTO membershipType(id, name, description,  price ) VALUES(2,'Platinum', 'Platinum', 49);
 INSERT INTO membershipType(id, name, description, price ) VALUES(3,'Diamond', 'Diamond', 99);
 
+#Membership
+################
+
+#Expired membership
+INSERT INTO membership (id, playerId, membershipTypeId, startDate, expirationDate) VALUES (1, 103, 1, '2019-01-01', '2020-01-01');
+INSERT INTO membership (id, playerId, membershipTypeId, startDate, expirationDate) VALUES (2, 104, 2, '2019-10-12', '2020-10-12');
+
+#Close to expire membership
+set @date =  (select DATE_ADD(CURDATE(), INTERVAL 15 DAY) );
+set @date2 =  (select DATE_ADD(CURDATE(), INTERVAL 20 DAY) );
+INSERT INTO membership (id, playerId, membershipTypeId, startDate, expirationDate) VALUES (3, 105, 1,DATE_SUB(@date, INTERVAL 1 YEAR), @date );
+INSERT INTO membership (id, playerId, membershipTypeId, startDate, expirationDate) VALUES (4, 106, 2, DATE_SUB(@date2, INTERVAL 1 YEAR), @date2 );
+
+#Membership not expired
+set @startDate =  '2020-09-01';
+set @expirationDate =  (select DATE_ADD(@startDate, INTERVAL 1 YEAR) );
+
+INSERT INTO membership (id, playerId, membershipTypeId, startDate, expirationDate) VALUES (5, 107, 1,@startDate, @expirationDate );
+INSERT INTO membership (id, playerId, membershipTypeId, startDate, expirationDate) VALUES (6, 108, 2, @startDate, @expirationDate );
+INSERT INTO membership (id, playerId, membershipTypeId, startDate, expirationDate) VALUES (7, 109, 3,@startDate, @expirationDate );
+INSERT INTO membership (id, playerId, membershipTypeId, startDate, expirationDate) VALUES (8, 110, 3, @startDate,  @expirationDate );
+
 #TypeOfMatch
+################
 insert into TypeOfMatch(id, name, label) values (1, 'Tournament', 'Tournament');
 
 #resultType
+################
 INSERT INTO resultType(id, name, label, points) VALUES (1,'Defeated','Defeated', 0);
 INSERT INTO resultType(id, name, label, points) VALUES (2,'Draw','Draw', 0.5);
 INSERT INTO resultType(id, name, label, points) VALUES (3,'Winner','Winner', 1);
 INSERT INTO matchGame(id, typeOfMatchId, datePlayed) VALUES (1, 1, '1972-8-31');
 
-#playerMatchGame
-INSERT INTO playerMatchGame (playerId, matchGameId, white, resultTypeId) VALUES (4,1,TRUE, 3);
-INSERT INTO playerMatchGame (playerId, matchGameId, white, resultTypeId) VALUES (5,1,FALSE, 1);
+#playerRole
+################
+INSERT INTO playerRole (playerId, matchGameId, white, resultTypeId) VALUES (4,1,TRUE, 3);
+INSERT INTO playerRole (playerId, matchGameId, white, resultTypeId) VALUES (5,1,FALSE, 1);
 
 #tournament
+################
 INSERT INTO tournament(id, name, year, countryId) VALUES(1, 'World Chess Championship 1972', 1972, 1 );
+
+#tournaments to be accounted for profit
+INSERT INTO tournament(id, name, year, startDate, endDate , countryId, onWebPlatform, entryFee, prize) VALUES(100, 'FIDE Candidates Tournament', 2020, '2020-03-17','2020-04-4', 180, null, 250, 500000);
+INSERT INTO tournament(id, name, year, startDate, endDate , countryId, onWebPlatform, entryFee, prize) VALUES(101, 'Banter Blitz Cup Finals', 2020, '2020-04-17','2020-04-20', null, true, 50, 50000);
+INSERT INTO tournament(id, name, year, startDate, endDate , countryId, onWebPlatform, entryFee, prize) VALUES(102, 'Superbet Chess Classic Romania', 2020, '2020-05-4','2020-05-15', 179, null,100,200000);
+INSERT INTO tournament(id, name, year, startDate, endDate , countryId, onWebPlatform, entryFee, prize) VALUES(103, 'Paris Grand Chess Tour', 2020, '2020-06-24','2020-06-28', 73, null,300, 700000);
 
 #tournamentPlayer
 INSERT INTO tournamentPlayer(tournamentId, playerId, points, ranking) VALUES (1,4, 12.5,1);
 INSERT INTO tournamentPlayer(tournamentId, playerId, points, ranking) VALUES (1,5, 8.5,2);
 
+#tournamentPlayer to be accounted for profit (month 4)
+INSERT INTO tournamentPlayer(tournamentId, playerId, points, ranking) VALUES (101,1, 12,1);
+INSERT INTO tournamentPlayer(tournamentId, playerId, points, ranking) VALUES (101,2, 11,2);
+INSERT INTO tournamentPlayer(tournamentId, playerId, points, ranking) VALUES (101,6, 10,3);
+INSERT INTO tournamentPlayer(tournamentId, playerId, points, ranking) VALUES (101,7, 9,4);
+
+INSERT INTO tournamentPlayer(tournamentId, playerId, points, ranking) VALUES (101,100, 8,5);
+INSERT INTO tournamentPlayer(tournamentId, playerId, points, ranking) VALUES (101,101, 7,6);
+INSERT INTO tournamentPlayer(tournamentId, playerId, points, ranking) VALUES (101,102, 6,7);
+INSERT INTO tournamentPlayer(tournamentId, playerId, points, ranking) VALUES (101,103, 4,8);
+INSERT INTO tournamentPlayer(tournamentId, playerId, points, ranking) VALUES (101,104, 3,9);
+INSERT INTO tournamentPlayer(tournamentId, playerId, points, ranking) VALUES (101,105, 2,10);
+
+#tournamentPlayer to be accounted for profit (month 6)
+INSERT INTO tournamentPlayer(tournamentId, playerId, points, ranking) VALUES (103,1, 12,1);
+INSERT INTO tournamentPlayer(tournamentId, playerId, points, ranking) VALUES (103,2, 11,2);
+INSERT INTO tournamentPlayer(tournamentId, playerId, points, ranking) VALUES (103,6, 10,3);
+INSERT INTO tournamentPlayer(tournamentId, playerId, points, ranking) VALUES (103,7, 9,4);
+
+INSERT INTO tournamentPlayer(tournamentId, playerId, points, ranking) VALUES (103,100, 8,5);
+INSERT INTO tournamentPlayer(tournamentId, playerId, points, ranking) VALUES (103,101, 7,6);
+INSERT INTO tournamentPlayer(tournamentId, playerId, points, ranking) VALUES (103,102, 6,7);
+INSERT INTO tournamentPlayer(tournamentId, playerId, points, ranking) VALUES (103,103, 4,8);
+INSERT INTO tournamentPlayer(tournamentId, playerId, points, ranking) VALUES (103,104, 3,9);
+INSERT INTO tournamentPlayer(tournamentId, playerId, points, ranking) VALUES (103,105, 2,10);
+
 #tournamentMatch
+#################
 INSERT INTO tournamentMatch(tournamentId, matchId) VALUES (1, 1);
 
- #Insert moves
+#Insert moves
+################
 INSERT INTO chessgo.move (id, matchGameId, moveOrder, whiteMove, blackMove, whiteMoveTime, blackMoveTIme) VALUES (1, 1, 1, 'e4', 'c5', null, null);
 INSERT INTO chessgo.move (id, matchGameId, moveOrder, whiteMove, blackMove, whiteMoveTime, blackMoveTIme) VALUES (2, 1, 2, 'Nf3', 'e6', null, null);
 INSERT INTO chessgo.move (id, matchGameId, moveOrder, whiteMove, blackMove, whiteMoveTime, blackMoveTIme) VALUES (3, 1, 3, 'd4', 'cxd4', null, null);
@@ -477,77 +541,132 @@ INSERT INTO chessgo.move (id, matchGameId, moveOrder, whiteMove, blackMove, whit
 INSERT INTO chessgo.move (id, matchGameId, moveOrder, whiteMove, blackMove, whiteMoveTime, blackMoveTIme) VALUES (40, 1, 40, 'Be6', 'h5', null, null);
 INSERT INTO chessgo.move (id, matchGameId, moveOrder, whiteMove, blackMove, whiteMoveTime, blackMoveTIme) VALUES (41, 1, 41, 'Bd7', null, null, null);
 
-#Queries
 
-#Retrieve users with membership expired on current year
+#############################################################
+# 3. Queries
+#############################################################
+
+# 1. Retrieve users with membership expired on current year
+#Expected result:
+#Emily Ho	2019-01-01	2020-01-01	Gold	China
+#Sandra Levis	2019-10-12	2020-10-12	Platinum	France
+
 SELECT      concat(p.firstName ,' ', p.lastName) as playerName,
 			m.startDate,
-            m.expirationDate
+            m.expirationDate,
+            mt.name as Membership,
+			c.name as Country
 FROM		player p
 			INNER JOIN membership m on m.playerId = p.id
+            INNER JOIN membershipType mt on mt.id = m.membershipTypeId
+             INNER JOIN Country c on c.id = p.countryId
 WHERE 		YEAR(m.expirationDate) = YEAR(CURDATE()) 
 		AND CURDATE() > m.expirationDate;    
 
-#Retrieve users with membership close to expire within a range of 1 month
+
+# 2. Retrieve users with membership close to expire within a range of 1 month
+#Expected result:
+#Charles Simpson	2020-12-22	15	Gold	French Southern Territories
+#Marie Hilton	2020-12-27	20	Platinum	Gabon
+
 SELECT      concat(p.firstName ,' ', p.lastName) as playerName,
 			m.expirationDate,
-            DATEDIFF(CURDATE(), m.expirationDate) as daysToExpire
+            ABS(DATEDIFF(CURDATE(), m.expirationDate)) as daysToExpire,
+			mt.name as Membership,
+			c.name as Country
 FROM		player p
 			INNER JOIN membership m on m.playerId = p.id
+            INNER JOIN membershipType mt on mt.id = m.membershipTypeId
+            INNER JOIN Country c on c.id = p.countryId
 WHERE 		YEAR(m.expirationDate) = YEAR(CURDATE()) 
 		AND DATE_ADD( m.expirationDate, INTERVAL 1 MONTH) >= CURDATE() ;
-        
-#Retrieve profits from memberships for current year
+    
+# 3. Retrieve profits from memberships for current year
+#Expected result: 276.00
+
 SELECT  SUM(mt.price)
 FROM	membership m
 		INNER JOIN membershipType mt on mt.id = m.membershipTypeId
 WHERE   YEAR(m.startDate) =  YEAR(CURDATE()) 
-	AND  m.expirationDate > CURDATE();
+    AND  mt.price > 0;    
         
-#Retrieve profits by membership for current year
+# 4. Retrieve profits by membership for current year
+#Expected result: 
+#Gold	29.00
+#Platinum	49.00
+#Diamond	198.00
+
 SELECT  mt.name as membershipType,
 		SUM(mt.price) AS profit
 FROM	membership m
 		INNER JOIN membershipType mt on mt.id = m.membershipTypeId
 WHERE   YEAR(m.startDate) =  YEAR(CURDATE()) 
 	AND  m.expirationDate > CURDATE()
+	AND  mt.price > 0
 GROUP BY mt.name;    
     
-#Retrieve yearly profits from tournaments for current year
+# 5. Retrieve profit from tournaments for current year
+#Expected result: 3500.00
+
 SELECT      SUM(t.entryFee)
 FROM    	tournament t
-WHERE   	YEAR(t.startDate) =  YEAR(CURDATE());	
+			INNER JOIN tournamentplayer tp ON tp.tournamentId = t.id
+            INNER JOIN player p ON p.id = tp.playerId
+WHERE   	YEAR(t.startDate) =  YEAR(CURDATE())
+		AND t.entryFee > 0;
 
-#Retrieve monthly profits from tournaments for current year
+# 6. Retrieve monthly profits from tournaments for current year
+#Expected result: 
+#4	500.00
+#6	3000.00
+
 SELECT      MONTH(t.startDate),
 			SUM(t.entryFee)
 FROM    	tournament t
+			INNER JOIN tournamentplayer tp ON tp.tournamentId = t.id
+            INNER JOIN player p ON p.id = tp.playerId
 WHERE      YEAR(t.startDate) =  YEAR(CURDATE()) 
         AND t.entryFee > 0
 GROUP BY	MONTH(t.startDate)        
 ORDER BY    MONTH(t.startDate) ASC;  
 
-#Retrieve average of yearly profits for the last 3 years
+# 7. Retrieve yearly profits for the last 2 years including current
+#Expected result:
+#2020	3500.00
+#2019	
+#2018	
+
 SELECT      YEAR(CURDATE())  AS year,
 			SUM(t.entryFee)  AS Profit
 FROM    	tournament t
+			INNER JOIN tournamentplayer tp ON tp.tournamentId = t.id
+            INNER JOIN player p ON p.id = tp.playerId
 WHERE   	YEAR(t.startDate) =  YEAR(CURDATE()) 		
         AND t.entryFee > 0
 UNION         
 SELECT      YEAR(date_sub( CURDATE(), INTERVAL 1 YEAR))  AS year,
 			SUM(t.entryFee)  AS Profit
 FROM    	tournament t
+			INNER JOIN tournamentplayer tp ON tp.tournamentId = t.id
+            INNER JOIN player p ON p.id = tp.playerId
 WHERE   	YEAR(t.startDate) =  YEAR(date_sub( CURDATE(), INTERVAL 1 YEAR))	
         AND t.entryFee > 0        
 UNION         
 SELECT      YEAR(date_sub( CURDATE(), INTERVAL 2 YEAR))  AS year,
 			SUM(t.entryFee)  AS Profit
 FROM    	tournament t
+			INNER JOIN tournamentplayer tp ON tp.tournamentId = t.id
+            INNER JOIN player p ON p.id = tp.playerId
 WHERE   	YEAR(t.startDate) =  YEAR(date_sub( CURDATE(), INTERVAL 2 YEAR))	
         AND t.entryFee > 0    
-ORDER BY    year DESC;
+ORDER BY    year DESC; 
 
-#Retrieve global ranking    
+# 8. Retrieve global ranking    
+# Expected result (showing only a top 3 as an example)
+#Magnus Carlsen	Norway	3200	1
+#Hikaru Nakamura	United States	3100	2
+#Garry Kasparov	Russian Federation	2851	3
+
 SELECT      concat(p.firstName ,' ', p.lastName) as playerName ,
 			c.name as Country,
             p.elo as eloRating,
@@ -557,5 +676,3 @@ SELECT      concat(p.firstName ,' ', p.lastName) as playerName ,
 FROM   		player p 
 			INNER JOIN country c on c.id = p.countryId
 ORDER BY	p.elo DESC;
-
-#TODO: Add rank for a group of friends
