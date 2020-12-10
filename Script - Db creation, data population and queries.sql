@@ -1,21 +1,24 @@
-#############################################################
+##########################################################################################################################
 # 1. Database creation
-#############################################################
+##########################################################################################################################
 
 DROP DATABASE IF EXISTS chessgo;
 CREATE DATABASE IF NOT EXISTS chessgo;
 USE chessgo;
 
-###########
+########################################################################
 # Tables
-###########
+########################################################################
 
+#country: Table used for storing countries which is referenced by player and tournament tables.
 CREATE TABLE country(
 id int not null,
 name varchar(50) not null UNIQUE,
 PRIMARY KEY (id)
 );
 
+#player: Stores chess players that can be related to membership, playerRole and tournamentPlayer tables.
+#Referenced by: membership, playerRole and tournamentPlayer.
 CREATE TABLE player(
 id int not null,
 firstName varchar(50) not null,
@@ -28,6 +31,9 @@ PRIMARY KEY (id),
 FOREIGN KEY (countryId) REFERENCES country(id)
 );
 
+#membershipType: It is a type of membership which could have different benefits within the web platform.
+#Referenced by: membership.
+#Examples: Gold, Platinum and Diamond, each of them with a different price.
 CREATE TABLE membershipType(
 id int not null,
 name varchar(50) not null,
@@ -36,6 +42,8 @@ price decimal(10,2) not null,
 PRIMARY KEY (id)
 );
 
+#membership: It represents a relationship between a membershipType and a user.
+#More importantly it allows to assign a membershipType to users for a period of time.
 CREATE TABLE membership(
 id int not null,
 playerId int not null,
@@ -48,13 +56,19 @@ FOREIGN KEY (playerId) REFERENCES player(id),
 FOREIGN KEY (membershipTypeId) REFERENCES membershipType(id)
 );
 
-CREATE TABLE TypeOfMatch(
+#typeOfMatch: It represents the different types of matches that a user could play, where each of them has different sub set of rules.
+#Referenced by: matchGame.
+#Examples: Tournament, Blitz, Bullet, Rapid, Daily and etc...
+CREATE TABLE typeOfMatch(
 id int not null,
 name varchar(50) not null,
 label varchar(50),
 PRIMARY KEY (id)
 );
 
+#resultType: Shows what was the result for a match given a user playing in a role (such as playing with white or black pieces).
+#Referenced by: playerRole.
+#Examples: Winner, draw, defeated. Each of them has a score in point associated.
 CREATE TABLE resultType(
 id int not null,
 name varchar(50),
@@ -63,14 +77,19 @@ points float not null,
 PRIMARY KEY (id)
 );
 
+#matchGame: This represent a chess game played by two players.
+#Referenced by: playerRole, tournamentMatch and move.
 CREATE TABLE matchGame(
 id int not null,
 typeOfMatchId int not null,
 datePlayed date not null,
 PRIMARY KEY (id),
-FOREIGN KEY (typeOfMatchId) REFERENCES TypeOfMatch(id)
+FOREIGN KEY (typeOfMatchId) REFERENCES typeOfMatch(id)
 );
 
+#playerRole: It represents what role a user has when playing a match.
+#There are only two roles for a given match: playing with white pieces (white = true) or playing with black pieces (white = false).
+#It contains the resultType (winner, draw or defeated) as well as the role of the player.
 CREATE TABLE playerRole(
 playerId int not null,
 matchGameId int not null,
@@ -82,6 +101,9 @@ FOREIGN KEY (matchGameId) REFERENCES matchGame(id),
 FOREIGN KEY (resultTypeId) REFERENCES resultType(id)
 );
 
+#tournament: It represent a tournament of chess whicu could be played online (onWebPlatform = true) or could be played in a phisical place such a country.
+#It also could represent a historical tournament such as the one populated as a mode of example (World Chess Championship 1972).
+#Refereced by: tournamentPlayer and tournamentMatch.
 CREATE TABLE tournament(
 id int not null,
 name varchar(100) not null,
@@ -96,6 +118,8 @@ PRIMARY KEY (id),
 FOREIGN KEY (countryId) REFERENCES country(id)
 );
 
+#tournamentPlayer: This table represents a player that has played in a tournament.
+#It contains the points and ranking acchieved on the tournament where the first position is indicated with ranking = 1.
 CREATE TABLE tournamentPlayer(
 tournamentId int  not null,
 playerId int  not null,
@@ -106,6 +130,7 @@ FOREIGN KEY (tournamentId) REFERENCES tournament(id),
 FOREIGN KEY (playerId) REFERENCES player(id)
 );
 
+#tournamentMatch: It is a match played on a given tournament. It relates: tournament and matchGame;
 CREATE TABLE tournamentMatch(
 tournamentId int not null,
 matchId int not null,
@@ -114,6 +139,11 @@ FOREIGN KEY (tournamentId) REFERENCES tournament(id),
 FOREIGN KEY (matchId) REFERENCES matchGame(id)
 );
 
+#move: This represents a movement in the chess game.
+#As always white is first then the last movement is given for white or white and black.
+#Examples: moveOrder: 1, whiteMove: e4, blackMove:c5. This is represented in PGN as: 1.e4 c5.
+#1. e4: white moves pawn from e2 to e4.
+#c5: black moves pawn from c7 to c5;
 CREATE TABLE move(
 id int not null,
 matchGameId int not null,
@@ -126,9 +156,9 @@ PRIMARY KEY (id),
 FOREIGN KEY (matchGameId) REFERENCES matchGame(id)
 );
 
-#############################################################
+##########################################################################################################################
 # 2. Population of tables
-#############################################################
+##########################################################################################################################
 
 #Country
 ############
@@ -437,9 +467,9 @@ INSERT INTO membership (id, playerId, membershipTypeId, startDate, expirationDat
 INSERT INTO membership (id, playerId, membershipTypeId, startDate, expirationDate) VALUES (7, 109, 3,@startDate, @expirationDate );
 INSERT INTO membership (id, playerId, membershipTypeId, startDate, expirationDate) VALUES (8, 110, 3, @startDate,  @expirationDate );
 
-#TypeOfMatch
+#typeOfMatch
 ################
-insert into TypeOfMatch(id, name, label) values (1, 'Tournament', 'Tournament');
+insert into typeOfMatch(id, name, label) values (1, 'Tournament', 'Tournament');
 
 #resultType
 ################
@@ -541,10 +571,12 @@ INSERT INTO chessgo.move (id, matchGameId, moveOrder, whiteMove, blackMove, whit
 INSERT INTO chessgo.move (id, matchGameId, moveOrder, whiteMove, blackMove, whiteMoveTime, blackMoveTIme) VALUES (40, 1, 40, 'Be6', 'h5', null, null);
 INSERT INTO chessgo.move (id, matchGameId, moveOrder, whiteMove, blackMove, whiteMoveTime, blackMoveTIme) VALUES (41, 1, 41, 'Bd7', null, null, null);
 
+#PGN equivalent: 1.e4 c5 2.Nf3 e6 3.d4 cxd4 4.Nxd4 a6 5.Nc3 Nc6 6.Be3 Nf6 7.Bd3 d5 8.exd5 exd5 9.0-0 Bd6 10.Nxc6 bxc6 11.Bd4 0-0 12.Qf3 Be6 13.Rfe1 c5 14.Bxf6 Qxf6 15.Qxf6 gxf6 16.Rad1 Rfd8 17.Be2 Rab8 18.b3 c4 19.Nxd5 Bxd5 20.Rxd5 Bxh2+ 21.Kxh2 Rxd5 22.Bxc4 Rd2 23.Bxa6 Rxc2 24.Re2 Rxe2 25.Bxe2 Rd8 26.a4 Rd2 27.Bc4 Ra2 28.Kg3 Kf8 29.Kf3 Ke7 30.g4 f5 31.gxf5 f6 32.Bg8 h6 33.Kg3 Kd6 34.Kf3 Ra1 35.Kg2 Ke5 36.Be6 Kf4 37.Bd7 Rb1 38.Be6 Rb2 39.Bc4 Ra2 40.Be6 h5 41.Bd7
 
-#############################################################
+
+##########################################################################################################################
 # 3. Queries
-#############################################################
+##########################################################################################################################
 
 # 1. Retrieve users with membership expired on current year
 #Expected result:
